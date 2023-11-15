@@ -3,6 +3,8 @@ package main
 import (
 	"GScan/infoscan/api"
 	"GScan/infoscan/config"
+	"GScan/infoscan/dao/base"
+	"GScan/infoscan/dao/mysql"
 	"GScan/infoscan/dao/sqlite"
 	"GScan/pkg"
 	"GScan/pkg/logger"
@@ -11,15 +13,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 )
-
-import _ "net/http/pprof"
-
-const debugmod = false
 
 var a *api.Api
 var Config *config.Config
@@ -100,14 +99,6 @@ Github:  https://github.com/Ymjie/GScan
 func init() {
 	//debugs()
 	banner()
-	if debugmod {
-		go func() {
-			err := http.ListenAndServe("0.0.0.0:9991", nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
-	}
 	//配置文件读取
 	c, err := config.LoadConfig("config.yml")
 	if err != nil {
@@ -122,9 +113,25 @@ func init() {
 	logfile, _ := os.OpenFile(filepath.Join(Config.LogPath, fmt.Sprintf("%s.log", time.Now().Format("2006-01-02 15-04-05"))), os.O_CREATE|os.O_RDWR, 0644)
 	logger.SetAllwriter(logfile)
 	// 数据库初始化
-	DB := sqlite.NewDB(filepath.Join(Config.ResultPath, "data.db"))
+	var DB *base.DAO
+	switch Config.DatabaseType {
+	case "sqlite":
+		DB = sqlite.NewDB(filepath.Join(Config.ResultPath, "data.db"))
+	case "mysql":
+		DB = mysql.NewDB(Config.Mysql.Host, Config.Mysql.Port, Config.Mysql.Username, Config.Mysql.Password, Config.Mysql.Dbname)
+	default:
+		DB = sqlite.NewDB(filepath.Join(Config.ResultPath, "data.db"))
+	}
 	//api 初始化
 	a = api.NewApi(DB, Config)
+	if Config.Debug {
+		go func() {
+			err := http.ListenAndServe("0.0.0.0:9991", nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
 }
 func geturl(urlpath string) ([]string, error) {
 	// url 列表读取

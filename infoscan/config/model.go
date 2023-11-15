@@ -11,6 +11,9 @@ type Config struct {
 	LogPath          string     `yaml:"LogPath"`
 	LogLevel         int64      `yaml:"LogLevel"`
 	LogPrintingLevel int64      `yaml:"LogPrintingLevel"`
+	Debug            bool       `yaml:"Debug"`
+	DatabaseType     string     `yaml:"DatabaseType"`
+	Mysql            MysqlConf  `yaml:"Mysql"`
 }
 
 type Httpspider struct {
@@ -33,4 +36,12 @@ type Spider struct {
 	Httpspider               Httpspider `yaml:"Httpspider"`
 	PageAnalyzeTimeoutSecond int        `yaml:"page_analyze_timeout_second"`
 	Retry                    int        `yaml:"retry"`
+}
+
+type MysqlConf struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Dbname   string `yaml:"dbname"`
 }
