@@ -50,14 +50,14 @@ func (e GormURL) Value() (driver.Value, error) {
 type Page struct {
 	gorm.Model
 	JobID      uint
-	Status     string
+	Status     string `gorm:"type:longtext"`
 	ErrorNum   int
-	Error      string
+	Error      string `gorm:"type:longtext"`
 	External   bool
-	URL        string
-	Title      string
+	URL        string `gorm:"type:longtext"`
+	Title      string `gorm:"type:longtext"`
 	Code       uint
-	Type       string
+	Type       string `gorm:"type:longtext"`
 	Length     int64
 	ExtURLList SliceType[string]
 }
@@ -65,9 +65,9 @@ type Page struct {
 type ProcessResult struct {
 	gorm.Model
 	JobID  uint
-	Type   string
+	Type   string `gorm:"type:longtext"`
 	PageID uint
-	Data   string
+	Data   string `gorm:"type:longtext"`
 }
 
 type WebTree struct {
@@ -83,6 +83,6 @@ func (WebTree) TableName() string {
 
 type Job struct {
 	gorm.Model
-	Name   string
-	Status string
+	Name   string `gorm:"type:longtext"`
+	Status string `gorm:"type:longtext"`
 }

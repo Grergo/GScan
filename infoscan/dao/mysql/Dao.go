@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm/logger"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -23,8 +24,8 @@ func NewDB(host string, port int, username string, password string, db string) *
 		},
 	)
 	mysqldb, err := gorm.Open(mysql.New(mysql.Config{
-		DSN:                       username + ":" + password + "@tcp(" + host + ":" + string(port) + ")/" + db + "?charset=utf8mb4&parseTime=True&loc=Local", // DSN data source name
-		DefaultStringSize:         256,                                                                                                                       // string 类型字段的默认长度
+		DSN:                       username + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + db + "?charset=utf8mb4&parseTime=True&loc=Local", // DSN data source name
+		DefaultStringSize:         512,                                                                                                                             // string 类型字段的默认长度
 		DisableDatetimePrecision:  true,
 		SkipInitializeWithVersion: false,
 	}), &gorm.Config{
