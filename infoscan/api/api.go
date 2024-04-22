@@ -20,14 +20,15 @@ func NewApi(db dao.IDAO, config *config.Config) *Api {
 		config: config,
 	}
 }
-func (a *Api) StartCrawlerJob(urls []string) (name string, id uint) {
+func (a *Api) StartCrawlerJob(urls []string, notice chan string) (name string, id uint) {
 	//pproff CPU占用监控
 	//pproff, _ := os.OpenFile(filepath.Join(Config.ResultPath, fmt.Sprintf("%s.cpu.pprof", time.Now().Format("2006-01-02 15-04-05"))), os.O_CREATE|os.O_RDWR, 0644)
 	//defer pproff.Close()
 	//pprof.StartCPUProfile(pproff)
 	//defer pprof.StopCPUProfile()
 	//启动任务
-	crawlerJob := Crawler.NewCrawlerJob(a.config, a.db, fmt.Sprintf("%s扫描%d个URL", time.Now().Format("2006-01-02 15-04-05"), len(urls)), urls)
+
+	crawlerJob := Crawler.NewCrawlerJob(a.config, a.db, fmt.Sprintf("%s扫描%d个URL", time.Now().Format("2006-01-02 15-04-05"), len(urls)), urls, notice)
 	ctx, _ := context.WithCancel(context.Background())
 	crawlerJob.Run(ctx)
 	return crawlerJob.Name, crawlerJob.ID

@@ -2,7 +2,9 @@ package base
 
 import (
 	"GScan/infoscan/dao"
+	"errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"sync"
 )
 
@@ -12,9 +14,9 @@ type DAO struct {
 }
 
 func (D *DAO) InsertPages(page []*dao.Page) {
-	D.Mutex.Lock()
+	//D.Mutex.Lock()
 	D.Db.Create(page)
-	D.Mutex.Unlock()
+	//D.Mutex.Unlock()
 }
 
 func (D *DAO) SelectPagesByMap(kv map[string]interface{}) ([]dao.Page, error) {
@@ -25,10 +27,12 @@ func (D *DAO) SelectPagesByMap(kv map[string]interface{}) ([]dao.Page, error) {
 	return pages, nil
 }
 
-func (D *DAO) UpdatePage(page *dao.Page) {
-	D.Mutex.Lock()
-	D.Db.Save(page)
-	D.Mutex.Unlock()
+func (D *DAO) UpdatePage(pages []*dao.Page) {
+	//D.Mutex.Lock()
+	//D.Db.Save(page)
+	D.Db.Clauses(clause.OnConflict{UpdateAll: true, Columns: []clause.Column{{Name: "id"}}}).Create(pages)
+	//D.Mutex.Unlock()
+
 }
 
 func (D *DAO) DeleteById(ID int64) {
@@ -49,22 +53,41 @@ func (D *DAO) GetResult(jobid uint) []dao.ProcessResult {
 	D.Mutex.Unlock()
 	return rr
 }
-func (D *DAO) WebTreeAdd(jobID uint, FPID uint, subID []uint) {
-	D.Mutex.Lock()
-	for _, sid := range subID {
-		var rs dao.WebTree
-		if D.Db.Where(&dao.WebTree{JobID: jobID, PageID: sid}).First(&rs).Error == gorm.ErrRecordNotFound {
-			rs.JobID = jobID
-			rs.PageID = sid
-			rs.FiD = append(rs.FiD, FPID)
-			D.Db.Create(&rs)
-		} else {
-			rs.FiD = append(rs.FiD, FPID)
-			D.Db.Save(&rs)
-		}
 
+func (D *DAO) WebTreeAddBySubID(jobID uint, FPIDs []uint, subID uint) {
+	D.Mutex.Lock()
+	var rs dao.WebTree
+	if errors.Is(D.Db.Where(&dao.WebTree{JobID: jobID, PageID: subID}).First(&rs).Error, gorm.ErrRecordNotFound) {
+		rs.JobID = jobID
+		rs.PageID = subID
+		rs.FiD = FPIDs
+		D.Db.Create(&rs)
+	} else {
+		rs.FiD = FPIDs
+		D.Db.Save(&rs)
 	}
 	D.Mutex.Unlock()
+}
+
+/*
+func (D *DAO) WebTreeAdd(jobID uint, pageID uint, fID []uint) {
+	D.Mutex.Lock()
+	defer D.Mutex.Unlock()
+	var rs dao.WebTree
+	if errors.Is(D.Db.Where(&dao.WebTree{JobID: jobID, PageID: pageID}).First(&rs).Error, gorm.ErrRecordNotFound) {
+		rs.JobID = jobID
+		rs.PageID = pageID
+		rs.FiD = fID
+		D.Db.Create(&rs)
+	} else {
+		rs.FiD = fID
+		D.Db.Save(&rs)
+	}
+}
+*/
+
+func (D *DAO) WebTreeAdd(trees []dao.WebTree) {
+	D.Db.Clauses(clause.OnConflict{UpdateAll: true, Columns: []clause.Column{{Name: "id"}}}).Create(trees)
 }
 
 func (D *DAO) WebTreeGet(jobID uint, id uint) ([]uint, error) {

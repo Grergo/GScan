@@ -26,9 +26,10 @@ type crawler struct {
 	Urls        []string
 	Scheduler   *pkg.QueueScheduler[string]
 	WXC         *Processor.WXDomainCheck
+	Notice      chan string
 }
 
-func NewCrawlerJob(config *config.Config, db dao.IDAO, name string, urls []string) *CrawlerJob {
+func NewCrawlerJob(config *config.Config, db dao.IDAO, name string, urls []string, notice chan string) *CrawlerJob {
 	s := &pkg.QueueScheduler[string]{}
 	s.Init()
 	s.Run()
@@ -44,6 +45,7 @@ func NewCrawlerJob(config *config.Config, db dao.IDAO, name string, urls []strin
 			WXC: &Processor.WXDomainCheck{
 				IProcessorDAO: db,
 			},
+			Notice: notice,
 		},
 	}
 }
@@ -63,7 +65,8 @@ func (c *CrawlerJob) init() {
 			v.AddUrlbypage(pages)
 			continue
 		}
-		spider := c.createSpider(parse)
+
+		spider := c.createSpider(parse, c.Notice)
 		c.Spiders[parse.Host] = spider
 		c.Scheduler.Submit(parse.Host)
 	}
@@ -112,7 +115,7 @@ func (c *CrawlerJob) CallbackFunc(page *dao.Page, body []byte) {
 
 }
 
-func (c *CrawlerJob) createSpider(URL *url.URL) *Spider.Spider {
+func (c *CrawlerJob) createSpider(URL *url.URL, NOTICE chan string) *Spider.Spider {
 
 	spider :=
 		Spider.NewSpider(&c.config.Spider, c.Job.ID, c.DAO).
@@ -120,6 +123,7 @@ func (c *CrawlerJob) createSpider(URL *url.URL) *Spider.Spider {
 			SetMainUrl(URL).
 			SetCallbackFunc(c.CallbackFunc).
 			SetReqer(HttpSpider.NewHttpSpider(&c.config.Spider.Httpspider)).
-			SetProcessor(Processor.NewDataProcessor(c.ID, c.DAO, append(Processor.DefaultHandlerFuncs, c.WXC.Handler), c.config.WhitelistFile))
+			SetProcessor(Processor.NewDataProcessor(c.ID, c.DAO, append(Processor.DefaultHandlerFuncs, c.WXC.Handler), c.config.WhitelistFile)).
+			SetNoticeChan(NOTICE)
 	return spider
 }

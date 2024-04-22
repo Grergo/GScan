@@ -15,8 +15,10 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -24,6 +26,8 @@ var a *api.Api
 var Config *config.Config
 var urlf = flag.String("u", "url.txt", "url text path")
 var outfile = flag.String("o", "outfile.xlsx", "outfile excel path")
+var notice = make(chan string)
+var signalCh = make(chan os.Signal, 1)
 
 func main() {
 	if len(os.Args) >= 2 {
@@ -37,7 +41,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			_, jobID := a.StartCrawlerJob(urls)
+			_, jobID := a.StartCrawlerJob(urls, notice)
 			a.Out2Excel(jobID, *outfile)
 			fmt.Print("Complete!")
 		case "ls":
@@ -66,7 +70,7 @@ Usage:
 		if !pkg.AskForConfirmation() {
 			return
 		}
-		jobname, jobID := a.StartCrawlerJob(urls)
+		jobname, jobID := a.StartCrawlerJob(urls, notice)
 		if jobID != 0 {
 			fmt.Printf("JobID:%d Name:%s 运行完成\n", jobID, jobname)
 			fmt.Printf("是否导出(Y/N):")
@@ -98,6 +102,7 @@ Github:  https://github.com/Ymjie/GScan
 
 func init() {
 	//debugs()
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 	banner()
 	//配置文件读取
 	c, err := config.LoadConfig("config.yml")
@@ -105,22 +110,22 @@ func init() {
 		log.Fatal(err)
 	}
 	Config = c
-	os.Mkdir(Config.ResultPath, 0644)
-	os.Mkdir(Config.LogPath, 0644)
+	os.Mkdir(Config.ResultPath, 0755)
+	os.Mkdir(Config.LogPath, 0755)
 	//设置日志
 	logger.Setallwriterlevel(Config.LogLevel)
 	logger.SetStdoutLv(Config.LogPrintingLevel)
-	logfile, _ := os.OpenFile(filepath.Join(Config.LogPath, fmt.Sprintf("%s.log", time.Now().Format("2006-01-02 15-04-05"))), os.O_CREATE|os.O_RDWR, 0644)
+	logfile, _ := os.OpenFile(filepath.Join(Config.LogPath, fmt.Sprintf("%s.log", time.Now().Format("2006-01-02 15-04-05"))), os.O_CREATE|os.O_RDWR, 0755)
 	logger.SetAllwriter(logfile)
 	// 数据库初始化
 	var DB *base.DAO
 	switch Config.DatabaseType {
 	case "sqlite":
-		DB = sqlite.NewDB(filepath.Join(Config.ResultPath, "data.db"))
+		DB = sqlite.NewDB(filepath.Join(Config.ResultPath, "data.db"), Config.LogPath)
 	case "mysql":
-		DB = mysql.NewDB(Config.Mysql.Host, Config.Mysql.Port, Config.Mysql.Username, Config.Mysql.Password, Config.Mysql.Dbname)
+		DB = mysql.NewDB(Config.Mysql.Host, Config.Mysql.Port, Config.Mysql.Username, Config.Mysql.Password, Config.Mysql.Dbname, Config.LogPath)
 	default:
-		DB = sqlite.NewDB(filepath.Join(Config.ResultPath, "data.db"))
+		DB = sqlite.NewDB(filepath.Join(Config.ResultPath, "data.db"), Config.LogPath)
 	}
 	//api 初始化
 	a = api.NewApi(DB, Config)
@@ -132,6 +137,7 @@ func init() {
 			}
 		}()
 	}
+	go PROCESSKILL(signalCh, notice)
 }
 func geturl(urlpath string) ([]string, error) {
 	// url 列表读取
@@ -149,4 +155,16 @@ func geturl(urlpath string) ([]string, error) {
 		return nil, err
 	}
 	return urls, nil
+}
+
+func PROCESSKILL(signalCh chan os.Signal, notice chan string) {
+	for {
+		sig := <-signalCh
+		switch sig {
+		case syscall.SIGINT, syscall.SIGTERM:
+			close(notice)
+			time.Sleep(10 * time.Second)
+			os.Exit(0)
+		}
+	}
 }

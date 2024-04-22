@@ -1,10 +1,12 @@
 module GScan
 
-go 1.18
+go 1.21.6
 
 require (
 	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
+	github.com/emirpasic/gods v1.18.1
 	github.com/glebarez/sqlite v1.7.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/xuri/excelize/v2 v2.6.1
 	golang.org/x/net v0.0.0-20220812174116-3211cb980234

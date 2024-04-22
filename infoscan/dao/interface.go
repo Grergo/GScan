@@ -10,7 +10,7 @@ type IDAO interface {
 type ICrawlerDAO interface {
 	InsertPages(page []*Page)
 	SelectPagesByMap(kv map[string]interface{}) ([]Page, error)
-	UpdatePage(page *Page)
+	UpdatePage(page []*Page)
 	DeleteById(ID int64)
 	GetOnePages(page *Page) *Page
 	GetAllPages(page *Page) []*Page
@@ -21,7 +21,8 @@ type IProcessorDAO interface {
 	GetResult(jobid uint) []ProcessResult
 }
 type IWebTreeDAO interface {
-	WebTreeAdd(jobID uint, FPID uint, subID []uint)
+	WebTreeAdd(trees []WebTree)
+	WebTreeAddBySubID(jobID uint, FPIDs []uint, subID uint)
 	WebTreeGet(jobID uint, id uint) ([]uint, error)
 	WebTreeGetAll(jobID uint) ([]*WebTree, error)
 	WebPageLink(jobID uint, id uint) [][]uint
