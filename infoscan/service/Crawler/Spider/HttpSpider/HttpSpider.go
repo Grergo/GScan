@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -114,7 +113,7 @@ func (h *HttpSpider) GetUrl(page *dao.Page) ([]byte, error) {
 		if page.Length >= 1024*1024*5 { //大于5M
 			return nil, errors.New("not text data and Length大于5M")
 		}
-		_, err := io.Copy(ioutil.Discard, response.Body)
+		_, err := io.Copy(io.Discard, response.Body)
 		if err != nil {
 			return nil, err
 		}

@@ -9,8 +9,8 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/xuri/excelize/v2 v2.6.1
-	golang.org/x/net v0.0.0-20220812174116-3211cb980234
-	golang.org/x/text v0.3.7
+	golang.org/x/net v0.21.0
+	golang.org/x/text v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/gorm v1.25.2-0.20230530020048-26663ab9bf55
@@ -30,8 +30,8 @@ require (
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
 	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect
-	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	modernc.org/libc v1.22.2 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect

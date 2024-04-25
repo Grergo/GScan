@@ -2,11 +2,12 @@ package config
 
 import (
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"os"
 )
 
 func LoadConfig(path string) (*Config, error) {
-	configFile, err := ioutil.ReadFile(path)
+	configFile, err := os.ReadFile(path)
+
 	if err != nil {
 		return nil, err
 	}

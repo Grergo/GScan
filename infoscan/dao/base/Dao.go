@@ -5,7 +5,9 @@ import (
 	"errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"strings"
 	"sync"
+	"time"
 )
 
 type DAO struct {
@@ -14,9 +16,32 @@ type DAO struct {
 }
 
 func (D *DAO) InsertPages(page []*dao.Page) {
-	//D.Mutex.Lock()
-	D.Db.Create(page)
-	//D.Mutex.Unlock()
+	retries := 0
+	for {
+		result := D.Db.Clauses(clause.OnConflict{UpdateAll: true, Columns: []clause.Column{{Name: "id"}}}).Create(page)
+		if result.Error != nil {
+			if retries >= 3 {
+				return
+			}
+			retries++
+			if IsDatabaseLockedError(result.Error) {
+				retries++
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+		} else {
+			return
+		}
+	}
+
+}
+func IsDatabaseLockedError(err error) bool {
+	if err != nil {
+		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "timeout exceeded") {
+			return true
+		}
+	}
+	return false
 }
 
 func (D *DAO) SelectPagesByMap(kv map[string]interface{}) ([]dao.Page, error) {
@@ -28,11 +53,7 @@ func (D *DAO) SelectPagesByMap(kv map[string]interface{}) ([]dao.Page, error) {
 }
 
 func (D *DAO) UpdatePage(pages []*dao.Page) {
-	//D.Mutex.Lock()
-	//D.Db.Save(page)
 	D.Db.Clauses(clause.OnConflict{UpdateAll: true, Columns: []clause.Column{{Name: "id"}}}).Create(pages)
-	//D.Mutex.Unlock()
-
 }
 
 func (D *DAO) DeleteById(ID int64) {
@@ -68,23 +89,6 @@ func (D *DAO) WebTreeAddBySubID(jobID uint, FPIDs []uint, subID uint) {
 	}
 	D.Mutex.Unlock()
 }
-
-/*
-func (D *DAO) WebTreeAdd(jobID uint, pageID uint, fID []uint) {
-	D.Mutex.Lock()
-	defer D.Mutex.Unlock()
-	var rs dao.WebTree
-	if errors.Is(D.Db.Where(&dao.WebTree{JobID: jobID, PageID: pageID}).First(&rs).Error, gorm.ErrRecordNotFound) {
-		rs.JobID = jobID
-		rs.PageID = pageID
-		rs.FiD = fID
-		D.Db.Create(&rs)
-	} else {
-		rs.FiD = fID
-		D.Db.Save(&rs)
-	}
-}
-*/
 
 func (D *DAO) WebTreeAdd(trees []dao.WebTree) {
 	D.Db.Clauses(clause.OnConflict{UpdateAll: true, Columns: []clause.Column{{Name: "id"}}}).Create(trees)

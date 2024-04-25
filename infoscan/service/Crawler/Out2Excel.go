@@ -9,8 +9,8 @@ import (
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 	"html"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -209,5 +209,5 @@ func Out2Json(jobid uint, DAO dao.IDAO, filename string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	ioutil.WriteFile(filename, marshal, 0644)
+	os.WriteFile(filename, marshal, 0755)
 }

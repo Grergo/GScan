@@ -20,7 +20,6 @@ func (s *Spider) Processor(page *dao.Page, body []byte) {
 	if parse.Host != s.Host {
 		page.External = true
 		s.PageCacheDB.Update(page.URL, page)
-		//s.DAO.UpdatePage(page) // TODO: fix 1  保存结果，是否可以暂时保存到内存中？
 		s.CallbackFunc(page, body)
 		return
 	} else {
@@ -35,7 +34,6 @@ func (s *Spider) Processor(page *dao.Page, body []byte) {
 		if !strings.HasPrefix(page.Error, "not text") {
 			logger.PF(logger.LWARN, "<Spider>[%s]%s访问出错(%d),%s", s.Host, page.URL, page.ErrorNum, page.Error)
 		}
-		//s.DAO.UpdatePage(page) //TODO: fix 2 保存结果，是否可以保存到内存中？
 		s.PageCacheDB.Update(page.URL, page)
 		return
 	}
@@ -53,7 +51,6 @@ func (s *Spider) Processor(page *dao.Page, body []byte) {
 	for _, p := range npages {
 		pids = append(pids, p.ID)
 	}
-	//s.DAO.WebTreeAdd(s.JobID, page.ID, pids) // TODO:fix 4 全程在内存中操作，完成之后保存到数据库
 	s.WebTreeCacheDB.Add(s.JobID, page.ID, pids)
 	s.AddUrlbypage(npages)
 }
@@ -75,7 +72,6 @@ func (s *Spider) AddUrlbyURL(URL []*url.URL) []*dao.Page {
 }
 
 func (s *Spider) AddNewPage(urls []*url.URL) ([]*dao.Page, error) {
-	//todo 完善异常处理
 	var pgs []*dao.Page
 	for _, surl := range urls {
 		urlstr := surl.String()

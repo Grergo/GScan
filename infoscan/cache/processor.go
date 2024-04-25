@@ -17,26 +17,34 @@ func (c *PagesCacheDB) Add(pages []*dao.Page) {
 		}
 		c.Urls.Add(page.URL)
 		err := c.Data.Add(page.URL, page, cache.DefaultExpiration)
-		if err != nil {
-			logger.PF(logger.LERROR, "<CacheProcessor>[%s]%s  :%s", "PagesCacheDB", "Add", err)
-		}
+		handleCacheError(err, "PagesCacheDB", "Add")
 	}
 }
 
 func (c *PagesCacheDB) Update(url string, page *dao.Page) {
 	c.Lock.Lock()
 	defer c.Lock.Unlock()
-	if c.Urls.Contains(url) {
-		err := c.Data.Replace(url, page, cache.DefaultExpiration)
-		if err != nil {
-			logger.PF(logger.LERROR, "<CacheProcessor>[%s]%s  :%s", "PagesCacheDB", "update", err)
+	if page.ID != 0 {
+		if c.Urls.Contains(url) {
+			err := c.Data.Replace(url, page, cache.DefaultExpiration)
+			handleCacheError(err, "PagesCacheDB", "update")
+		} else {
+			c.Urls.Add(url)
+			err := c.Data.Add(url, page, cache.DefaultExpiration)
+			handleCacheError(err, "PagesCacheDB", "update")
 		}
-	} else {
-		c.Urls.Add(url)
-		err := c.Data.Add(url, page, cache.DefaultExpiration)
-		if err != nil {
-			logger.PF(logger.LERROR, "<CacheProcessor>[%s]%s  :%s", "PagesCacheDB", "update", err)
+	} else if page.ID == 0 {
+
+		var pages = []*dao.Page{page}
+		c.DAO.InsertPages(pages)
+		if pages[0].ID == 0 {
+			logger.PF(logger.LERROR, "<CacheProcessor>[%s]%s  :%s", "PagesCacheDB", "Add", "发现Page.ID为0的Page,插入Page失败")
+		} else {
+			logger.PF(logger.LWARN, "<CacheProcessor>[%s]%s  :%s", "PagesCacheDB", "Add", "发现Page.ID为0的Page,已插入数据库")
 		}
+		c.Urls.Add(page.URL)
+		err := c.Data.Add(page.URL, page, cache.DefaultExpiration)
+		handleCacheError(err, "PagesCacheDB", "update")
 	}
 }
 
@@ -85,7 +93,6 @@ func (c *PagesCacheDB) Dump() {
 	defer c.Lock.RUnlock()
 	var pages []*dao.Page
 	for _, v := range c.Data.Items() {
-		//c.DAO.UpdatePage(v.Object.(*dao.Page))
 		pages = append(pages, v.Object.(*dao.Page))
 	}
 	c.DAO.UpdatePage(pages)
@@ -98,7 +105,8 @@ func (w *WebTreeCacheDB) Add(jobid, pageid uint, pids []uint) {
 	for _, pid := range pids {
 		if !w.PIDS.Contains(pid) {
 			w.PIDS.Add(pid)
-			w.Data.Add(strconv.Itoa(int(pid)), WebTreeData{JobID: jobid, FIDS: []uint{pageid}}, cache.DefaultExpiration)
+			err := w.Data.Add(strconv.Itoa(int(pid)), WebTreeData{JobID: jobid, FIDS: []uint{pageid}}, cache.DefaultExpiration)
+			handleCacheError(err, "WebTreeCacheDB", "Add")
 		} else {
 			data, found := w.Data.Get(strconv.Itoa(int(pid)))
 			if found {
@@ -107,7 +115,8 @@ func (w *WebTreeCacheDB) Add(jobid, pageid uint, pids []uint) {
 					FIDS:  append(data.(WebTreeData).FIDS, pageid),
 				}, cache.DefaultExpiration)
 			} else {
-				w.Data.Add(strconv.Itoa(int(pid)), WebTreeData{JobID: jobid, FIDS: []uint{pageid}}, cache.DefaultExpiration)
+				err := w.Data.Add(strconv.Itoa(int(pid)), WebTreeData{JobID: jobid, FIDS: []uint{pageid}}, cache.DefaultExpiration)
+				handleCacheError(err, "WebTreeCacheDB", "Add")
 			}
 		}
 	}
@@ -116,11 +125,9 @@ func (w *WebTreeCacheDB) Add(jobid, pageid uint, pids []uint) {
 func (w *WebTreeCacheDB) Dump() {
 	w.Lock.RLock()
 	defer w.Lock.RUnlock()
-	logger.PF(logger.LINFO, "<CacheProcessor>[%s]%s  :%d", "WebTreeCacheDB", "Start Dump", len(w.PIDS.Values()))
 	var trees []dao.WebTree
 	for key, v := range w.Data.Items() {
 		ukey, _ := strconv.ParseUint(key, 10, 64)
-		//w.DAO.WebTreeAdd(v.Object.(WebTreeData).JobID, uint(ukey), v.Object.(WebTreeData).FIDS)
 		trees = append(trees, dao.WebTree{
 			JobID:  v.Object.(WebTreeData).JobID,
 			PageID: uint(ukey),
@@ -164,5 +171,11 @@ func (w *WebTreeCacheDB) PROCESSEND(notices <-chan string) {
 		default:
 			continue
 		}
+	}
+}
+
+func handleCacheError(err error, model string, method string) {
+	if err != nil {
+		logger.PF(logger.LERROR, "<CacheProcessor>[%s]%s  :%s", model, method, err)
 	}
 }
